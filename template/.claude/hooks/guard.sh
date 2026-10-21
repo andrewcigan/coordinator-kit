@@ -39,7 +39,10 @@ resolve() {
     tail="/$(basename "$p")$tail"
     p=$(dirname "$p")
   done
-  printf '%s%s' "$(cd "$p" 2>/dev/null && pwd -P)" "$tail"
+  local dir
+  dir=$(cd "$p" 2>/dev/null && pwd -P)
+  [ "$dir" = / ] && dir=""
+  [ -n "$dir$tail" ] && printf '%s%s' "$dir" "$tail" || printf '/'
 }
 
 # Windows (Git Bash): пути приходят в виде C:\Users\… — переводим в /c/Users/…
@@ -59,7 +62,8 @@ path=$(field file_path)
 path=$(topath "$path")
 case "$path" in /*) ;; *) path="$ROOT/$path" ;; esac
 path=$(resolve "$path")
-home=$(resolve "$HOME")
+home=$(resolve "$(topath "${USERPROFILE:-$HOME}")") # где Claude Code держит ~/.claude (на Windows — профиль)
+tmp=$(resolve /tmp)                                  # черновики сессий; на Windows /tmp — это папка Temp
 
 block() { printf '%s\n' "$1" >&2; exit 2; }
 
@@ -77,7 +81,7 @@ if [ "$(basename "$path")" = "PROJECT.md" ]; then
 fi
 
 case "$path" in
-  "$ROOT/CLAUDE.md" | "$ROOT/PROJECTS.md" | "$ROOT/directions.md" | "$ROOT/.claude/"* | "$home/.claude/"* | /tmp/claude-* | /private/tmp/claude-*)
+  "$ROOT/CLAUDE.md" | "$ROOT/PROJECTS.md" | "$ROOT/directions.md" | "$ROOT/.claude/"* | "$home/.claude/"* | "$tmp"/claude-* | /tmp/claude-* | /private/tmp/claude-*)
     exit 0
     ;;
 esac
