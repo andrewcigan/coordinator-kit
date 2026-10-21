@@ -76,7 +76,13 @@ while IFS= read -r f; do
       ;;
   esac
   if [ ! -e "$dst" ]; then
-    mkdir -p "$(dirname "$dst")" && cp "$src" "$dst" || problem "не скопировал $f"
+    mkdir -p "$(dirname "$dst")" || problem "не создал папку для $f"
+    if [ "$f" = CLAUDE.md ]; then
+      # Метки и в новом файле: повторная установка узнает свои правила и не задвоит их.
+      { printf '%s\n' "$MARK_BEGIN"; cat "$src"; printf '%s\n' "$MARK_END"; } >"$dst" || problem "не скопировал $f"
+    else
+      cp "$src" "$dst" || problem "не скопировал $f"
+    fi
     continue
   fi
   case "$f" in

@@ -77,6 +77,8 @@ expect_code 0 "$code" "повтор: код 0"
 expect_has "$(cat "$ROOT/directions.md")" "моя правка" "повтор: свои правки целы"
 expect_code 1 "$(count coordinator-status-icon "$HOME/.claude/settings.json")" "повтор: без дубля хука"
 expect_code 1 "$(count guard.sh "$ROOT/.claude/settings.json")" "повтор: без дубля сторожа"
+expect_code 1 "$(count 'coordinator-kit: начало' "$ROOT/CLAUDE.md")" "повтор: правила в CLAUDE.md один раз"
+expect_code 1 "$(count 'ты координатор' "$ROOT/CLAUDE.md")" "повтор: раздел координатора один раз"
 
 # --- Главная папка, где уже были свои CLAUDE.md и .claude/settings.json ---
 R2="$TMP/Existing"
