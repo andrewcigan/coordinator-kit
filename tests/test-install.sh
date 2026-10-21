@@ -37,7 +37,7 @@ r=$(merge user "$S" /h/status-icon.sh); expect_has "$r" added "чужой хук
 expect_has "$(cat "$S")" other.sh "чужой хук — на месте"
 expect_has "$(cat "$S")" '"Stop"' "другие события — на месте"
 
-before='{"hooks":{"UserPromptSubmit":[{"hooks":[{"type":"command","command":"python3 /x/status-icon-check.py"}]}]}}'
+before='{"hooks":{"UserPromptSubmit":[{"hooks":[{"type":"command","command":"bash /x/my-status-icon.sh"}]}]}}'
 echo "$before" >"$S"; r=$(merge user "$S" /h/status-icon.sh); expect_has "$r" exists "свой хук значков уже есть — не трогать"
 expect_code "$before" "$(cat "$S")" "свой хук значков — файл тот же байт в байт"
 

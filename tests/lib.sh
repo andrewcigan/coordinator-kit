@@ -11,6 +11,7 @@ expect_empty() { [ -z "$1" ] && ok || bad "$2" "ждали пусто, полу�
 
 # Проверка JSON без Python: JavaScript, который есть на любом Mac.
 expect_json() {
+  command -v osascript >/dev/null 2>&1 || { ok; return; } # не Mac: проверить нечем
   if printf '%s' "$1" | osascript -l JavaScript -e '
     ObjC.import("Foundation");
     const d = $.NSFileHandle.fileHandleWithStandardInput.readDataToEndOfFile;

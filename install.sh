@@ -50,6 +50,10 @@ while IFS= read -r f; do
   dst="$ROOT/$f"
   case "$f" in
     */.gitkeep) mkdir -p "$(dirname "$dst")"; continue ;;
+    .claude/settings.json)
+      # Не Mac (Windows): хук на bash без Git Bash блокировал бы координатору любую запись — сторож не ставим.
+      [ "$mac" = 1 ] || { say "Не Mac: сторож координатора не подключён (правило в CLAUDE.md остаётся)"; continue; }
+      ;;
   esac
   if [ ! -e "$dst" ]; then
     mkdir -p "$(dirname "$dst")" && cp "$f" "$dst" || problem "не скопировал $f"
@@ -66,12 +70,8 @@ while IFS= read -r f; do
       fi
       ;;
     .claude/settings.json)
-      if [ "$mac" = 1 ]; then
-        r=$(osascript -l JavaScript "$KIT/lib/merge-settings.js" file "$dst" "$f" "guard.sh" 2>&1) \
-          && say ".claude/settings.json уже был — дописан: $r" || problem ".claude/settings.json: $r"
-      else
-        skipped="$skipped .claude/settings.json(допишите вручную)"
-      fi
+      r=$(osascript -l JavaScript "$KIT/lib/merge-settings.js" file "$dst" "$f" "guard.sh" 2>&1) \
+        && say ".claude/settings.json уже был — дописан: $r" || problem ".claude/settings.json: $r"
       ;;
     *) skipped="$skipped $f" ;;
   esac
@@ -102,10 +102,12 @@ fi
 # 4. Проверка поставленного
 out=$(printf '%s' '{"prompt":"да","session_title":"❓ Проверка"}' | bash "$HOOK_DST" 2>/dev/null)
 case "$out" in *'take the ❓ off'*) say "Проверка хука значков: ок" ;; *) problem "хук значков не ответил как ждали" ;; esac
-code=0
-printf '{"tool_name":"Write","tool_input":{"file_path":"%s/infra/x/app.py"}}' "$ROOT" \
-  | CLAUDE_PROJECT_DIR="$ROOT" bash "$ROOT/.claude/hooks/guard.sh" >/dev/null 2>&1 || code=$?
-[ "$code" = 2 ] && say "Проверка сторожа: ок" || problem "сторож не блокирует рабочий файл"
+if [ "$mac" = 1 ]; then
+  code=0
+  printf '{"tool_name":"Write","tool_input":{"file_path":"%s/infra/x/app.py"}}' "$ROOT" \
+    | CLAUDE_PROJECT_DIR="$ROOT" bash "$ROOT/.claude/hooks/guard.sh" >/dev/null 2>&1 || code=$?
+  [ "$code" = 2 ] && say "Проверка сторожа: ок" || problem "сторож не блокирует рабочий файл"
+fi
 
 if [ "$problems" -eq 0 ]; then
   say "ГОТОВО. Главная папка: $ROOT"

@@ -40,6 +40,12 @@ check 0 "$ROOT" "/private/tmp/claude-501/x/scratchpad/a.md" "черновики 
 check 0 "$ROOT" "/tmp/claude-501/x/a.md" "черновики сессии (/tmp)"
 check 0 "$ROOT" "$HOME/old-bot/PROJECT.md" "паспорт существующего проекта вне главной папки"
 
+# Обход через «..» не проходит, честные «..» работают
+check 2 "$ROOT" "$ROOT/.claude/nope/../../infra/x.py" "обход через .claude/../.."
+check 2 "$ROOT" "/private/tmp/claude-501/../../$ROOT/infra/x.py" "обход через черновики/../.."
+check 0 "$ROOT" "$ROOT/infra/../PROJECTS.md" "честный .. к своему файлу"
+check 2 "$ROOT" "$ROOT//infra/./x.py" "двойной / и ./ — всё равно рабочий файл"
+
 # Имена папок проектов — латиница
 check 2 "$ROOT" "$ROOT/infra/Бот-записи/PROJECT.md" "кириллица в имени папки"
 check 2 "$ROOT" "$ROOT/infra/VpnBot/PROJECT.md" "заглавные буквы в имени папки"

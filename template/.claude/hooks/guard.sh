@@ -16,9 +16,25 @@ field() {
     | sed -e 's/\\\//\//g' -e 's/\\"/"/g' -e 's/\\\\/\\/g'
 }
 
+# Убрать из полного пути «.», «..» и двойные «/» — по тексту, чтобы «x/../..» не обошёл проверку.
+normalize() {
+  local IFS=/ part
+  local -a parts out=()
+  read -ra parts <<<"$1"
+  for part in "${parts[@]}"; do
+    case "$part" in
+      "" | .) ;;
+      ..) [ ${#out[@]} -gt 0 ] && unset "out[$((${#out[@]} - 1))]" ;;
+      *) out+=("$part") ;;
+    esac
+  done
+  [ ${#out[@]} -gt 0 ] && printf '/%s' "${out[@]}" || printf '/'
+}
+
 # Настоящий путь (без ярлыков) даже для файла, которого ещё нет: ищем ближайшую существующую папку.
 resolve() {
-  local p=$1 tail=""
+  local p tail=""
+  p=$(normalize "$1")
   while [ -n "$p" ] && [ "$p" != "/" ] && [ ! -d "$p" ]; do
     tail="/$(basename "$p")$tail"
     p=$(dirname "$p")

@@ -15,6 +15,8 @@ input=$(cat 2>/dev/null) || exit 0
 Q=$'\xe2\x9d\x93'   # ❓
 D=$'\xe2\x9c\x85'   # ✅
 VS=$'\xef\xb8\x8f'  # невидимый знак варианта после эмодзи
+BS='\'
+EQ="${BS}u2753"; ED="${BS}u2705"; EVS="${BS}ufe0f" # те же знаки, если JSON записал их кодами
 
 # Строка-значение по ключу, как она записана в JSON (с экранированием). Ключ внутри другой
 # строки всегда экранирован (\"key\"), поэтому подделка в тексте сообщения не совпадёт.
@@ -29,12 +31,12 @@ esac
 
 title=$(field session_title)
 case "$title" in
-  "$Q"* | '❓'*) icon="❓" ;;
-  "$D"* | '✅'*) icon="✅" ;;
+  "$Q"* | "$EQ"*) icon="❓" ;;
+  "$D"* | "$ED"*) icon="✅" ;;
   *) exit 0 ;;
 esac
-rest=${title#"$Q"}; rest=${rest#'❓'}; rest=${rest#"$D"}; rest=${rest#'✅'}
-rest=${rest#"$VS"}; rest=${rest#'️'}
+rest=${title#"$Q"}; rest=${rest#"$EQ"}; rest=${rest#"$D"}; rest=${rest#"$ED"}
+rest=${rest#"$VS"}; rest=${rest#"$EVS"}
 while [ "${rest# }" != "$rest" ]; do rest=${rest# }; done
 [ -n "$rest" ] || exit 0
 

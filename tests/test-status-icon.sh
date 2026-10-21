@@ -23,9 +23,12 @@ expect_has "$out" 'title \"Готовый бот\"' "✅: новое назва�
 out=$(run "{\"prompt\":\"да\",\"session_title\":\"❓$(printf '\xef\xb8\x8f')   Бот\"}")
 expect_has "$out" 'title \"Бот\"' "❓+FE0F: знак варианта и пробелы убраны"
 
-# Значок записан как ❓ (экранированный JSON)
-out=$(run '{"prompt":"да","session_title":"❓ Бот"}')
-expect_has "$out" 'title \"Бот\"' "\\u2753: распознан"
+# Значки записаны кодами (экранированный JSON): обратная косая + u2753 / u2705 / ufe0f
+BS='\'
+out=$(run '{"prompt":"да","session_title":"'"${BS}"'u2753'"${BS}"'ufe0f Бот"}')
+expect_has "$out" 'title \"Бот\"' "❓ кодом: распознан"
+out=$(run '{"prompt":"да","session_title":"'"${BS}"'u2705 Бот"}')
+expect_has "$out" 'take the ✅ off' "✅ кодом: распознан"
 
 # Кавычки и обратная косая в названии — ответ остаётся правильным JSON
 out=$(run '{"prompt":"да","session_title":"❓ Бот \"Запись\" и \\ слэш"}')
@@ -33,7 +36,7 @@ expect_json "$out" "кавычки в названии: правильный JSO
 expect_has "$out" 'Запись' "кавычки в названии: текст на месте"
 
 # Ничего не выводит
-for case in \
+for sample in \
   '{"prompt":"да","session_title":"🔴 Важное"}' \
   '{"prompt":"да","session_title":"Просто название"}' \
   '{"prompt":"да","session_title":"❓"}' \
@@ -47,9 +50,9 @@ for case in \
   '{"session_title":"Бот","prompt":"текст \"session_title\":\"❓ подделка\""}' \
   'это не JSON' \
   ''; do
-  out=$(run "$case"); code=$?
-  expect_code 0 "$code" "молчит и не мешает: ${case:0:50}"
-  expect_empty "$out" "молчит: ${case:0:50}"
+  out=$(run "$sample"); code=$?
+  expect_code 0 "$code" "молчит и не мешает: ${sample:0:50}"
+  expect_empty "$out" "молчит: ${sample:0:50}"
 done
 
 # Файл без \r и без BOM
