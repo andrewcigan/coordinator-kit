@@ -4,13 +4,16 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 KIT=$(cd "$HERE/.." && pwd)
 . "$HERE/lib.sh"
 
-MERGE="$KIT/lib/merge-settings.js"
-merge() { osascript -l JavaScript "$MERGE" "$@" 2>&1; }
+# Запись настроек — через обёртку: на Mac JavaScript, на Windows PowerShell
+# (COORDINATOR_KIT_PWSH=<pwsh> — вариант для Windows на Mac).
+merge() { bash "$KIT/lib/merge-settings.sh" "$@" 2>&1; }
 count() { grep -o "$1" "$2" 2>/dev/null | wc -l | tr -d ' '; }
+case "$(uname -s)" in MINGW* | MSYS* | CYGWIN*) win=1 ;; *) win=0 ;; esac
 
 TMP=$(mktemp -d)
 export HOME="$TMP/home"
 mkdir -p "$HOME"
+[ "$win" = 1 ] && export USERPROFILE=$(cygpath -w "$HOME")
 
 # --- Слияние пользовательских настроек: шесть видов файла ---
 S="$TMP/s.json"
@@ -27,8 +30,11 @@ rm -f "$TMP"/s.json.bak-coordinator-kit-*
 
 printf '{\n  "theme": "auto",\n  "env": {"A": "1"}\n}\n' >"$S"; chmod 600 "$S"
 r=$(merge user "$S" /h/status-icon.sh); expect_has "$r" added "чужие ключи — дописан"
-expect_has "$(cat "$S")" '"theme": "auto"' "чужие ключи — сохранены"
-expect_code 600 "$(stat -f %Lp "$S")" "права файла сохранены"
+expect_has "$(cat "$S")" 'auto' "чужие ключи — сохранены"
+expect_has "$(cat "$S")" 'env' "чужие ключи — сохранены (env)"
+if [ "$(uname -s)" = Darwin ] && [ -z "$COORDINATOR_KIT_PWSH" ]; then
+  expect_code 600 "$(stat -f %Lp "$S")" "права файла сохранены"
+fi
 expect_code 1 "$(ls "$TMP" | grep -c 's.json.bak-coordinator-kit')" "копия до правки сделана"
 rm -f "$TMP"/s.json.bak-coordinator-kit-*
 
@@ -94,7 +100,7 @@ expect_code 2 "$code" "домашняя папка целиком — отказ
 out=$(bash "$KIT/install.sh" "AI" 2>&1); code=$?
 expect_code 2 "$code" "неполный путь — отказ"
 
-for f in "$KIT/install.sh" "$MERGE"; do expect_clean_file "$f" "без \\r и BOM: $(basename "$f")"; done
+for f in "$KIT/install.sh" "$KIT/lib/merge-settings.sh" "$KIT/lib/merge-settings.js" "$KIT/lib/merge-settings.ps1"; do expect_clean_file "$f" "без \\r и BOM: $(basename "$f")"; done
 
 rm -rf "$TMP"
 finish

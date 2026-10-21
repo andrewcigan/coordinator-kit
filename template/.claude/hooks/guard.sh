@@ -42,14 +42,21 @@ resolve() {
   printf '%s%s' "$(cd "$p" 2>/dev/null && pwd -P)" "$tail"
 }
 
+# Windows (Git Bash): пути приходят в виде C:\Users\… — переводим в /c/Users/…
+topath() {
+  if command -v cygpath >/dev/null 2>&1; then cygpath -u "$1"; else printf '%s' "$1"; fi
+}
+
 ROOT=$(cd "$(dirname "$0")/../.." 2>/dev/null && pwd -P) || exit 0
 session=${CLAUDE_PROJECT_DIR:-$(field cwd)}
 [ -n "$session" ] || exit 0
+session=$(topath "$session")
 [ "$(resolve "$session")" = "$ROOT" ] || exit 0 # не координатор
 
 path=$(field file_path)
 [ -n "$path" ] || path=$(field notebook_path)
 [ -n "$path" ] || exit 0
+path=$(topath "$path")
 case "$path" in /*) ;; *) path="$ROOT/$path" ;; esac
 path=$(resolve "$path")
 home=$(resolve "$HOME")

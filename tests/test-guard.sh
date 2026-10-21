@@ -68,6 +68,22 @@ expect_code 0 "$code" "мусор на входе — пропустить"
 code=0; printf '{"tool_name":"Write","tool_input":{}}' | CLAUDE_PROJECT_DIR="$ROOT" bash "$GUARD" 2>/dev/null || code=$?
 expect_code 0 "$code" "нет пути — пропустить"
 
+# Windows: пути в виде C:\Users\… (в JSON обратная косая удвоена)
+if command -v cygpath >/dev/null 2>&1; then
+  wjson() { local w; w=$(cygpath -w "$1"); printf '%s' "${w//\\/\\\\}"; }
+  wroot=$(cygpath -w "$ROOT")
+  wcheck() {
+    local code=0
+    printf '{"tool_name":"Write","tool_input":{"file_path":"%s"}}' "$(wjson "$2")" \
+      | CLAUDE_PROJECT_DIR="$wroot" bash "$(cygpath -m "$GUARD")" >/dev/null 2>&1 || code=$?
+    expect_code "$1" "$code" "Windows: $3"
+  }
+  wcheck 2 "$ROOT/infra/vpn-bot/bot.py" "рабочий файл"
+  wcheck 0 "$ROOT/infra/vpn-bot/PROJECT.md" "паспорт"
+  wcheck 0 "$ROOT/PROJECTS.md" "список проектов"
+  wcheck 2 "$ROOT/infra/Бот/PROJECT.md" "кириллица в имени папки"
+fi
+
 expect_clean_file "$SRC" "сторож: без \\r и BOM"
 
 rm -rf "$TMP"

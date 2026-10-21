@@ -1,5 +1,6 @@
 #!/bin/bash
 # Установщик набора «Координатор».   bash install.sh <главная папка>
+# Mac — в Терминале или сессии Claude; Windows — в Git Bash (ставится вместе с Git for Windows).
 #
 # 1. Проверяет свои хуки на тестовых примерах — если что-то не так, ничего не меняет.
 # 2. Кладёт шаблон в главную папку. Существующие файлы не перезаписывает: CLAUDE.md дополняет
@@ -10,29 +11,39 @@
 # Повторный запуск безопасен.
 
 KIT=$(cd "$(dirname "$0")" && pwd)
-ROOT=${1%/}
 MARK_BEGIN="<!-- coordinator-kit: начало -->"
 MARK_END="<!-- coordinator-kit: конец -->"
-HOOK_DST="$HOME/.claude/hooks/coordinator-status-icon.sh"
 problems=0
 
 say() { printf '%s\n' "$*"; }
 problem() { problems=$((problems + 1)); say "ОШИБКА: $*"; }
 
+case "$(uname -s)" in
+  Darwin) os=mac ;;
+  MINGW* | MSYS* | CYGWIN*) os=win ;;
+  *) os=other ;;
+esac
+
+ROOT=$1
+[ "$os" = win ] && [ -n "$ROOT" ] && ROOT=$(cygpath -u "$ROOT")
+ROOT=${ROOT%/}
 case "$ROOT" in
   "") say "Нужна главная папка: bash install.sh <папка>"; exit 2 ;;
   /*) ;;
   *) say "Главная папка — полный путь, например $HOME/AI"; exit 2 ;;
 esac
+
+# Домашняя папка, где Claude Code держит свои настройки (на Windows — профиль пользователя).
+CLAUDE_HOME=$HOME
+[ "$os" = win ] && [ -n "$USERPROFILE" ] && CLAUDE_HOME=$(cygpath -u "$USERPROFILE")
+HOOK_DST="$CLAUDE_HOME/.claude/hooks/coordinator-status-icon.sh"
+
 mkdir -p "$ROOT" || { say "Не могу создать $ROOT"; exit 2; }
 ROOT=$(cd "$ROOT" && pwd -P)
-if [ "$ROOT" = "$(cd "$HOME" 2>/dev/null && pwd -P)" ] || [ "$ROOT" = "/" ]; then
-  say "Главная папка не может быть домашней папкой целиком — возьмите отдельную, например $HOME/AI"
+if [ "$ROOT" = "$(cd "$CLAUDE_HOME" 2>/dev/null && pwd -P)" ] || [ "$ROOT" = "/" ]; then
+  say "Главная папка не может быть домашней папкой целиком — возьмите отдельную, например $CLAUDE_HOME/AI"
   exit 2
 fi
-
-mac=1
-[ "$(uname -s)" = "Darwin" ] || mac=0
 
 # 1. Самопроверка до любых изменений
 if ! bash "$KIT/tests/test-status-icon.sh" "$KIT/user/hooks/status-icon.sh" >/dev/null 2>&1 \
@@ -42,21 +53,30 @@ if ! bash "$KIT/tests/test-status-icon.sh" "$KIT/user/hooks/status-icon.sh" >/de
 fi
 say "Самопроверка хуков: ок"
 
+# Настройки главной папки: на Windows команда сторожа — с полным путём (переменная там в виде C:\…).
+PATCH="$KIT/template/.claude/settings.json"
+if [ "$os" = win ]; then
+  PATCH=$(mktemp)
+  win_root=$(cygpath -m "$ROOT")
+  sed "s#\$CLAUDE_PROJECT_DIR#$win_root#" "$KIT/template/.claude/settings.json" >"$PATCH"
+fi
+
 # 2. Шаблон в главную папку
 skipped=""
 cd "$KIT/template" || exit 1
 while IFS= read -r f; do
   f=${f#./}
   dst="$ROOT/$f"
+  src=$f
   case "$f" in
     */.gitkeep) mkdir -p "$(dirname "$dst")"; continue ;;
     .claude/settings.json)
-      # Не Mac (Windows): хук на bash без Git Bash блокировал бы координатору любую запись — сторож не ставим.
-      [ "$mac" = 1 ] || { say "Не Mac: сторож координатора не подключён (правило в CLAUDE.md остаётся)"; continue; }
+      [ "$os" = other ] && { say "Эта система не Mac и не Windows: сторож координатора не подключён (правило в CLAUDE.md остаётся)"; continue; }
+      src=$PATCH
       ;;
   esac
   if [ ! -e "$dst" ]; then
-    mkdir -p "$(dirname "$dst")" && cp "$f" "$dst" || problem "не скопировал $f"
+    mkdir -p "$(dirname "$dst")" && cp "$src" "$dst" || problem "не скопировал $f"
     continue
   fi
   case "$f" in
@@ -70,7 +90,7 @@ while IFS= read -r f; do
       fi
       ;;
     .claude/settings.json)
-      r=$(osascript -l JavaScript "$KIT/lib/merge-settings.js" file "$dst" "$f" "guard.sh" 2>&1) \
+      r=$(bash "$KIT/lib/merge-settings.sh" file "$dst" "$src" "guard.sh" 2>&1) \
         && say ".claude/settings.json уже был — дописан: $r" || problem ".claude/settings.json: $r"
       ;;
     *) skipped="$skipped $f" ;;
@@ -81,10 +101,10 @@ chmod +x "$ROOT/.claude/hooks/guard.sh" 2>/dev/null
 say "Шаблон в $ROOT: ок${skipped:+ (уже были, не трогал:$skipped)}"
 
 # 3. Хук значков для всех сессий на этом компьютере
-mkdir -p "$HOME/.claude/hooks" && cp "$KIT/user/hooks/status-icon.sh" "$HOOK_DST" && chmod +x "$HOOK_DST" \
+mkdir -p "$CLAUDE_HOME/.claude/hooks" && cp "$KIT/user/hooks/status-icon.sh" "$HOOK_DST" && chmod +x "$HOOK_DST" \
   || problem "не положил хук значков в $HOOK_DST"
-if [ "$mac" = 1 ]; then
-  r=$(osascript -l JavaScript "$KIT/lib/merge-settings.js" user "$HOME/.claude/settings.json" "$HOOK_DST" 2>&1)
+if [ "$os" != other ]; then
+  r=$(bash "$KIT/lib/merge-settings.sh" user "$CLAUDE_HOME/.claude/settings.json" "$HOOK_DST" 2>&1)
   case $? in
     0)
       case "$r" in
@@ -96,18 +116,19 @@ if [ "$mac" = 1 ]; then
     *) problem "хук значков не подключён: $r" ;;
   esac
 else
-  say "Не Mac: хук значков положен, но не подключён — значки ставит модель по правилу в CLAUDE.md"
+  say "Эта система не Mac и не Windows: хук значков положен, но не подключён — значки ставит модель по правилу в CLAUDE.md"
 fi
 
 # 4. Проверка поставленного
 out=$(printf '%s' '{"prompt":"да","session_title":"❓ Проверка"}' | bash "$HOOK_DST" 2>/dev/null)
 case "$out" in *'take the ❓ off'*) say "Проверка хука значков: ок" ;; *) problem "хук значков не ответил как ждали" ;; esac
-if [ "$mac" = 1 ]; then
+if [ "$os" != other ]; then
   code=0
   printf '{"tool_name":"Write","tool_input":{"file_path":"%s/infra/x/app.py"}}' "$ROOT" \
     | CLAUDE_PROJECT_DIR="$ROOT" bash "$ROOT/.claude/hooks/guard.sh" >/dev/null 2>&1 || code=$?
   [ "$code" = 2 ] && say "Проверка сторожа: ок" || problem "сторож не блокирует рабочий файл"
 fi
+[ "$os" = win ] && rm -f "$PATCH"
 
 if [ "$problems" -eq 0 ]; then
   say "ГОТОВО. Главная папка: $ROOT"
