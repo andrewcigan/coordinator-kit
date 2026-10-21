@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Edit(/PROJECTS.md)",
+      "Edit(/directions.md)",
+      "Edit(/**/PROJECT.md)",
+      "mcp__ccd_session__start_session",
+      "mcp__ccd_session_mgmt__detach_session",
+      "mcp__ccd_session_mgmt__list_sessions",
+      "mcp__ccd_session_mgmt__set_session_title",
+      "mcp__ccd_sidebar__list_groups",
+      "mcp__ccd_sidebar__create_group",
+      "mcp__ccd_sidebar__set_view",
+      "mcp__ccd_sidebar__move_sessions"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
