@@ -1,0 +1,9 @@
+#!/bin/bash
+# Перед каждым коммитом — все тесты набора. Включается один раз: git config core.hooksPath .githooks
+cd "$(git rev-parse --show-toplevel)" || exit 1
+if ! bash tests/run.sh >/tmp/coordinator-kit-pre-commit.log 2>&1; then
+  grep -E 'FAIL|прошло' /tmp/coordinator-kit-pre-commit.log
+  echo "Коммит остановлен: тесты не прошли. Полный вывод: /tmp/coordinator-kit-pre-commit.log"
+  exit 1
+fi
+echo "Тесты прошли"
