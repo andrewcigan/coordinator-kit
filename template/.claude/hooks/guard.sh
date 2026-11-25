@@ -8,7 +8,8 @@
 # Заодно следит, чтобы НОВЫЕ папки проектов назывались латиницей; готовые папки не трогает.
 # Непонятный ввод — пропустить (выход 0), чтобы не мешать работе.
 
-export LC_ALL=C
+# Windows (Git Bash): в локали C русские имена файлов в путях портятся (cygpath, -d, cd) — нужна UTF-8.
+if command -v cygpath >/dev/null 2>&1; then export LC_ALL=C.UTF-8; else export LC_ALL=C; fi
 
 input=$(cat 2>/dev/null) || exit 0
 
