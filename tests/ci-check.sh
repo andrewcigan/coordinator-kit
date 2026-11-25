@@ -20,7 +20,7 @@ command_of() {
 os_path() { if [ "$win" = 1 ]; then cygpath -w "$1"; else printf '%s' "$1"; fi; }
 json_path() { local p; p=$(os_path "$1"); printf '%s' "${p//\\/\\\\}"; }
 
-out=$(bash "$KIT/install.sh" "$(os_path "$ROOT")" 2>&1); code=$?
+out=$(bash "$KIT/install.sh" "$(os_path "$ROOT")" znachki 2>&1); code=$?
 printf '%s\n' "$out"
 expect_code 0 "$code" "установка на чистой машине: код 0"
 expect_has "$out" "ГОТОВО" "установка: отчёт"
@@ -52,7 +52,7 @@ guard 0 "$ROOT/infra/vpn-bot/PROJECT.md" "паспорт — можно"
 guard 0 "$ROOT/PROJECTS.md" "список проектов — можно"
 
 # Повтор установки — без дублей
-bash "$KIT/install.sh" "$(os_path "$ROOT")" >/dev/null 2>&1
+bash "$KIT/install.sh" "$(os_path "$ROOT")" znachki >/dev/null 2>&1
 expect_code 1 "$(grep -c coordinator-status-icon "$S")" "повтор: хук значков один"
 expect_code 1 "$(grep -c guard.sh "$P")" "повтор: сторож один"
 

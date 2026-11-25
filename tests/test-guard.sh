@@ -46,6 +46,22 @@ check 2 "$ROOT" "/private/tmp/claude-501/../../$ROOT/infra/x.py" "обход ч�
 check 0 "$ROOT" "$ROOT/infra/../PROJECTS.md" "честный .. к своему файлу"
 check 2 "$ROOT" "$ROOT//infra/./x.py" "двойной / и ./ — всё равно рабочий файл"
 
+# Новый проект: журналы завести можно, готовые менять нельзя
+for j in ХОД.md РЕШЕНИЯ.md ФИЧИ.md ОБРАТНАЯ-СВЯЗЬ.md AGENTS.md CLAUDE.md .gitignore; do
+  check 0 "$ROOT" "$ROOT/products/novyj/$j" "новый проект: завести $j"
+done
+mkdir -p "$ROOT/moy-mozg"; echo x >"$ROOT/moy-mozg/ХОД.md"
+check 2 "$ROOT" "$ROOT/moy-mozg/ХОД.md" "готовый ход чужого проекта" Edit
+: >"$ROOT/moy-mozg/РЕШЕНИЯ.md"
+check 0 "$ROOT" "$ROOT/moy-mozg/РЕШЕНИЯ.md" "пустой журнал можно заполнить"
+check 0 "$ROOT" "$ROOT/moy-mozg/ФИЧИ.md" "недостающий журнал готового проекта"
+check 0 "$ROOT" "$ROOT/AGENTS.md" "правила человека в корне"
+check 2 "$ROOT" "$ROOT/ХОД.md" "журнал в корне"
+check 2 "$ROOT" "$HOME/Desktop/ХОД.md" "журнал вне главной папки"
+mkdir -p "$ROOT/Клиент Ромашка"
+check 0 "$ROOT" "$ROOT/Клиент Ромашка/PROJECT.md" "готовая папка с русским именем: паспорт можно"
+check 2 "$ROOT" "$ROOT/products/Мой бот/ХОД.md" "новая папка кириллицей: журнал нельзя"
+
 # Имена папок проектов — латиница
 check 2 "$ROOT" "$ROOT/infra/Бот-записи/PROJECT.md" "кириллица в имени папки"
 check 2 "$ROOT" "$ROOT/infra/VpnBot/PROJECT.md" "заглавные буквы в имени папки"

@@ -3,8 +3,9 @@
 # Подключён в .claude/settings.json главной папки, поэтому действует только на сессию,
 # начатую в самом корне главной папки, то есть на координатора. Сессии в папках проектов не трогает.
 # Координатор не выполняет задачи сам: он правит только паспорта PROJECT.md, PROJECTS.md,
-# directions.md, CLAUDE.md и папку .claude. Всё остальное — выход 2, причина уходит Claude.
-# Заодно следит, чтобы папки проектов назывались латиницей.
+# directions.md, правила в корне и папку .claude, а в новом проекте заводит журналы (создать можно,
+# править чужие — нет). Всё остальное — выход 2, причина уходит Claude.
+# Заодно следит, чтобы НОВЫЕ папки проектов назывались латиницей; готовые папки не трогает.
 # Непонятный ввод — пропустить (выход 0), чтобы не мешать работе.
 
 export LC_ALL=C
@@ -67,23 +68,42 @@ tmp=$(resolve /tmp)                                  # черновики сес
 
 block() { printf '%s\n' "$1" >&2; exit 2; }
 
-if [ "$(basename "$path")" = "PROJECT.md" ]; then
-  case "$path" in
-    "$ROOT"/*)
-      rel=${path#"$ROOT"/}
-      rel=${rel%/PROJECT.md}
-      if ! printf '%s' "$rel" | grep -Eq '^[a-z0-9][a-z0-9-]*(/[a-z0-9][a-z0-9-]*)*$'; then
-        block "Координатор: имя папки проекта — только латиница, строчные буквы, цифры и дефис, например vpn-bot (кириллица и пробелы в пути путают историю сессий Claude). Русское название пиши внутри PROJECT.md. Сейчас: $rel"
-      fi
-      ;;
-  esac
+# Новая папка внутри главной — имя латиницей. Папка уже есть — имя не проверяем.
+latin_or_block() {
+  local dir rel
+  dir=$(dirname "$path")
+  [ -d "$dir" ] && return 0
+  case "$dir" in "$ROOT"/*) ;; *) return 0 ;; esac
+  rel=${dir#"$ROOT"/}
+  printf '%s' "$rel" | tail -c 200 | sed 's#.*/##' | grep -Eq '^[a-z0-9][a-z0-9-]*$' && return 0
+  block "Координатор: имя новой папки проекта — только латиница, строчные буквы, цифры и дефис, например vpn-bot. Русское название пиши внутри PROJECT.md. Сейчас: $rel"
+}
+
+name=$(basename "$path")
+if [ "$name" = "PROJECT.md" ]; then
+  latin_or_block
   exit 0
 fi
 
+# Журналы нового проекта: создать можно, менять готовые — дело сессии проекта.
+case "$name" in
+  "ХОД.md" | "РЕШЕНИЯ.md" | "ФИЧИ.md" | "ОБРАТНАЯ-СВЯЗЬ.md" | AGENTS.md | CLAUDE.md | .gitignore)
+    case "$(dirname "$path")" in
+      "$ROOT") ;;
+      "$ROOT"/*)
+        if [ ! -s "$path" ]; then # нет файла или он пустой
+          latin_or_block
+          exit 0
+        fi
+        ;;
+    esac
+    ;;
+esac
+
 case "$path" in
-  "$ROOT/CLAUDE.md" | "$ROOT/PROJECTS.md" | "$ROOT/directions.md" | "$ROOT/.claude/"* | "$home/.claude/"* | "$tmp"/claude-* | /tmp/claude-* | /private/tmp/claude-*)
+  "$ROOT/CLAUDE.md" | "$ROOT/AGENTS.md" | "$ROOT/PROJECTS.md" | "$ROOT/directions.md" | "$ROOT/.claude/"* | "$home/.claude/"* | "$tmp"/claude-* | /tmp/claude-* | /private/tmp/claude-*)
     exit 0
     ;;
 esac
 
-block "Координатор не выполняет задачи сам — даже мелкие. Заведи папку проекта с PROJECT.md по скиллу novoe и запусти в ней новую сессию (start_session; не вышло — дай человеку готовую фразу). Сам правишь только PROJECT.md, PROJECTS.md, directions.md, CLAUDE.md и папку .claude. Не обходи это через терминал."
+block "Координатор не выполняет задачи сам — даже мелкие. Запусти сессию в папке проекта по скиллу novoe (start_session; не вышло — дай человеку готовую фразу). Сам правишь только PROJECT.md, PROJECTS.md, directions.md, правила в корне и папку .claude; журналы заводишь только в новом проекте. Не обходи это через терминал."

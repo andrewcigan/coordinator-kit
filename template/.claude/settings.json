@@ -4,6 +4,11 @@
       "Edit(/PROJECTS.md)",
       "Edit(/directions.md)",
       "Edit(/**/PROJECT.md)",
+      "Edit(/**/ХОД.md)",
+      "Edit(/**/РЕШЕНИЯ.md)",
+      "Edit(/**/ФИЧИ.md)",
+      "Edit(/**/ОБРАТНАЯ-СВЯЗЬ.md)",
+      "Skill(novoe)",
       "mcp__ccd_session__start_session",
       "mcp__ccd_session_mgmt__detach_session",
       "mcp__ccd_session_mgmt__list_sessions",
@@ -11,7 +16,8 @@
       "mcp__ccd_sidebar__list_groups",
       "mcp__ccd_sidebar__create_group",
       "mcp__ccd_sidebar__set_view",
-      "mcp__ccd_sidebar__move_sessions"
+      "mcp__ccd_sidebar__move_sessions",
+      "mcp__ccd_sidebar__set_pinned"
     ]
   },
   "hooks": {
