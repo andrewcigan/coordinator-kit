@@ -117,7 +117,7 @@ own_lines() {
     | grep -vxFf "$KIT/lib/old-rules-2026-10-22.md" | grep -vxFf "$KIT/template/CLAUDE.md"
 }
 
-# 2. Шаблон в главную папку
+# 2. Шаблон в главную папку. Метка сторожа — без «/» в начале: Git Bash превращает такой аргумент в путь Windows.
 skipped=""
 updated=""
 cd "$KIT/template" || exit 1
@@ -165,7 +165,7 @@ while IFS= read -r f; do
       fi
       ;;
     .claude/settings.json)
-      r=$(bash "$KIT/lib/merge-settings.sh" file "$dst" "$src" "/.claude/hooks/guard.sh" 2>&1) \
+      r=$(bash "$KIT/lib/merge-settings.sh" file "$dst" "$src" ".claude/hooks/guard.sh" 2>&1) \
         && say ".claude/settings.json уже был — дописан: $r" || problem ".claude/settings.json: $r"
       ;;
     .claude/hooks/guard.sh | .claude/skills/novoe/SKILL.md)
@@ -223,7 +223,7 @@ if [ "$os" != other ]; then
   printf '{"tool_name":"Write","tool_input":{"file_path":"%s/proverka/x/app.py"}}' "$ROOT" \
     | CLAUDE_PROJECT_DIR="$ROOT" bash "$ROOT/.claude/hooks/guard.sh" >/dev/null 2>&1 || code=$?
   S="$ROOT/.claude/settings.json"
-  want='/.claude/hooks/guard.sh'
+  want='CLAUDE_PROJECT_DIR/.claude/hooks/guard.sh'
   [ "$os" = win ] && want="$(cygpath -m "$ROOT")/.claude/hooks/guard.sh"
   if [ "$code" != 2 ]; then
     problem "сторож не блокирует рабочий файл"
